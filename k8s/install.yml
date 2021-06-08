@@ -1,17 +1,24 @@
-kind: ClusterRole
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: external-pvc-scaler
+  namespace: kube-system
+---
+kind: Role
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: external-pvc-scaler
   namespace: kube-system
 rules:
 - apiGroups: [""]
-  resources: ["pods"]
+  resources: ["persistentvolumeclaims"]
   verbs: ["list"]
 ---
-kind: ClusterRoleBinding
+kind: RoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: pods-list
+  name: external-pvc-scaler
+  namespace: kube-system
 subjects:
 - kind: ServiceAccount
   name: external-pvc-scaler
@@ -20,3 +27,47 @@ roleRef:
   kind: ClusterRole
   name: external-pvc-scaler
   apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: external-pvc-scaler
+  namespace: kube-system
+data:
+  config.ini: |
+    [prometheus]
+    url=http://prometheus.monitoring:9090
+
+    [kubernetes]
+    in_cluster=yes
+    dry_run=yes
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: external-pvc-scaler
+  namespace: kube-system
+spec:
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: external-pvc-scaler
+  template:
+    metadata:
+      labels:
+        app: external-pvc-scaler
+    spec:
+      serviceAccountName: external-pvc-scaler
+      volumes:
+        - name: config
+          configMap:
+            name: external-pvc-scaler
+      containers:
+        - name: external-dns
+          image: cohandv/external-k8s-pvc-resizer
+          volumeMounts:
+            - name: config
+              mountPath: /app/config.ini
+              subPath: config.ini
+              readOnly: true
