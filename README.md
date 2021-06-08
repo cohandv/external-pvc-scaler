@@ -31,4 +31,4 @@ entity=persistentvolumeclaim
 * This file can be mounted in `/app/config.ini` otherwise will take the default values in the `default.ini` file
 * The only entity supported now is a PVC 
 
-### Query DO NOT GO WITH QUOTES! and conside that travel on the query string, so store it with the appropiate format
+### Query DOES NOT GO WITH QUOTES! and consider that it travels on the query string, so store it with the appropiate format
